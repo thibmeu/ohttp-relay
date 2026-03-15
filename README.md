@@ -9,9 +9,9 @@ Forwards encrypted OHTTP requests to a gateway without decrypting them, preservi
 ## Table of Contents
 
 - [Deploy](#deploy)
+- [Configuration](#configuration)
   - [Cloudflare service binding](#cloudflare-service-binding)
   - [Netlify configuration](#netlify-configuration)
-- [Configuration](#configuration)
 - [Protocol](#protocol)
 - [Development](#development)
 - [Architecture](#architecture)
@@ -26,6 +26,15 @@ Forwards encrypted OHTTP requests to a gateway without decrypting them, preservi
 | Netlify | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/thibmeu/ohttp-relay) | Edge (Deno) |
 | Railway | [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template/ohttp-relay) | Node.js |
 
+## Configuration
+
+| Variable | Default | Description |
+|---|---|---|
+| `GATEWAY_URL` | `https://gateway.ohttp.info` | Base URL of the OHTTP gateway |
+| `CORS_ORIGIN` | `*` | Allowed CORS origin |
+| `MAX_REQUEST_SIZE` | `1048576` | Maximum request body size (bytes) |
+| `PORT` | `3000` | Listening port (Node.js only) |
+
 ### Cloudflare service binding
 
 If you deploy [ohttp-gateway](https://github.com/thibmeu/ohttp-gateway) as a Cloudflare Worker named `ohttp-gateway` in the same account, you can enable a service binding for lower latency (no extra network hop):
@@ -35,15 +44,6 @@ If you deploy [ohttp-gateway](https://github.com/thibmeu/ohttp-gateway) as a Clo
 ### Netlify configuration
 
 Netlify's deploy button does not support prompting for environment variables. After deploying, set `GATEWAY_URL` manually in **Site settings → Environment variables**.
-
-## Configuration
-
-| Variable | Default | Description |
-|---|---|---|
-| `GATEWAY_URL` | `https://gateway.ohttp.info` | Base URL of the OHTTP gateway |
-| `CORS_ORIGIN` | `*` | Allowed CORS origin |
-| `MAX_REQUEST_SIZE` | `1048576` | Maximum request body size (bytes) |
-| `PORT` | `3000` | Listening port (Node.js only) |
 
 ## Protocol
 
