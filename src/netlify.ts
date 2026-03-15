@@ -3,7 +3,7 @@
  */
 
 import { handle } from "hono/netlify";
-import { createApp } from "../../src/relay.ts";
+import { createApp } from "./relay.ts";
 
 export default handle(
 	createApp({

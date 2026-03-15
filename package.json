@@ -12,7 +12,7 @@
     "deploy": "wrangler deploy",
     "start": "tsx src/server.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check src api"
+    "lint": "biome check src"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.11",

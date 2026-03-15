@@ -1,3 +1,6 @@
+[build]
+  edge_functions = "src"
+
 [[edge_functions]]
   path = "/*"
-  function = "relay"
+  function = "netlify"

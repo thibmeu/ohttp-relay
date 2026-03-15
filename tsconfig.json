@@ -13,6 +13,6 @@
     "verbatimModuleSyntax": true,
     "resolveJsonModule": true
   },
-  "include": ["src/relay.ts", "src/index.ts", "api/**/*.ts"],
+  "include": ["src/relay.ts", "src/index.ts", "src/vercel.ts"],
   "exclude": ["node_modules"]
 }
