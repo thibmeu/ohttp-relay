@@ -1,8 +1,21 @@
 # ohttp-relay
 
+[![License](https://img.shields.io/github/license/thibmeu/ohttp-relay?style=flat-square)](LICENSE)
+
 An [Oblivious HTTP (RFC 9458)](https://www.rfc-editor.org/rfc/rfc9458) relay.
 
 Forwards encrypted OHTTP requests to a gateway without decrypting them, preserving client privacy. The gateway only ever sees the relay's IP address, not the client's.
+
+## Table of Contents
+
+- [Deploy](#deploy)
+- [Configuration](#configuration)
+- [Protocol](#protocol)
+- [Development](#development)
+- [Cloudflare service binding](#cloudflare-service-binding)
+- [Netlify configuration](#netlify-configuration)
+- [Architecture](#architecture)
+- [License](#license)
 
 ## Deploy
 
@@ -10,7 +23,7 @@ Forwards encrypted OHTTP requests to a gateway without decrypting them, preservi
 |---|---|---|
 | Cloudflare | [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/thibmeu/ohttp-relay) | Workers |
 | Vercel | [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fthibmeu%2Fohttp-relay&env=GATEWAY_URL&envDescription=Base+URL+of+the+OHTTP+gateway&envLink=https%3A%2F%2Fgithub.com%2Fthibmeu%2Fohttp-relay%23configuration&project-name=ohttp-relay&repository-name=ohttp-relay) | Edge |
-| Netlify | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/thibmeu/ohttp-relay) | Edge (Deno) — set `GATEWAY_URL` in site settings after deploy |
+| Netlify | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/thibmeu/ohttp-relay) | Edge (Deno) |
 | Railway | [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template/ohttp-relay) | Node.js |
 
 ## Configuration
@@ -50,6 +63,10 @@ If you deploy [ohttp-gateway](https://github.com/thibmeu/ohttp-gateway) as a Clo
 1. Uncomment the `[[services]]` block in `wrangler.toml`
 2. Set `USE_SERVICE_BINDING = "true"` in `[vars]`
 
+## Netlify configuration
+
+Netlify's deploy button does not support prompting for environment variables. After deploying, set `GATEWAY_URL` manually in **Site settings → Environment variables**.
+
 ## Architecture
 
 ```
@@ -59,3 +76,7 @@ Client → Relay → Gateway → Target
 ```
 
 The relay is a pure passthrough — it never decrypts OHTTP messages. This is what provides the privacy guarantee: the gateway learns what the client requested but not who made the request; the relay knows who made the request but not what was requested.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
