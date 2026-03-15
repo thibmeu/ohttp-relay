@@ -9,11 +9,11 @@ Forwards encrypted OHTTP requests to a gateway without decrypting them, preservi
 ## Table of Contents
 
 - [Deploy](#deploy)
+  - [Cloudflare service binding](#cloudflare-service-binding)
+  - [Netlify configuration](#netlify-configuration)
 - [Configuration](#configuration)
 - [Protocol](#protocol)
 - [Development](#development)
-- [Cloudflare service binding](#cloudflare-service-binding)
-- [Netlify configuration](#netlify-configuration)
 - [Architecture](#architecture)
 - [License](#license)
 
@@ -25,6 +25,16 @@ Forwards encrypted OHTTP requests to a gateway without decrypting them, preservi
 | Vercel | [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fthibmeu%2Fohttp-relay&env=GATEWAY_URL&envDescription=Base+URL+of+the+OHTTP+gateway&envLink=https%3A%2F%2Fgithub.com%2Fthibmeu%2Fohttp-relay%23configuration&project-name=ohttp-relay&repository-name=ohttp-relay) | Edge |
 | Netlify | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/thibmeu/ohttp-relay) | Edge (Deno) |
 | Railway | [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template/ohttp-relay) | Node.js |
+
+### Cloudflare service binding
+
+If you deploy [ohttp-gateway](https://github.com/thibmeu/ohttp-gateway) as a Cloudflare Worker named `ohttp-gateway` in the same account, you can enable a service binding for lower latency (no extra network hop):
+
+1. Uncomment the `[[services]]` block in `wrangler.toml`
+
+### Netlify configuration
+
+Netlify's deploy button does not support prompting for environment variables. After deploying, set `GATEWAY_URL` manually in **Site settings → Environment variables**.
 
 ## Configuration
 
@@ -55,16 +65,6 @@ npm run dev
 # Node.js server
 npm start
 ```
-
-## Cloudflare service binding
-
-If you deploy [ohttp-gateway](https://github.com/thibmeu/ohttp-gateway) as a Cloudflare Worker named `ohttp-gateway` in the same account, you can enable a service binding for lower latency (no extra network hop):
-
-1. Uncomment the `[[services]]` block in `wrangler.toml`
-
-## Netlify configuration
-
-Netlify's deploy button does not support prompting for environment variables. After deploying, set `GATEWAY_URL` manually in **Site settings → Environment variables**.
 
 ## Architecture
 
