@@ -1,0 +1,4 @@
+# Copy to .dev.vars for local Cloudflare Workers development (wrangler dev)
+GATEWAY_URL=https://gateway.ohttp.info
+MAX_REQUEST_SIZE=1048576
+CORS_ORIGIN=*

@@ -1,0 +1,25 @@
+name = "ohttp-relay"
+main = "src/index.ts"
+compatibility_date = "2025-03-10"
+workers_dev = true
+
+# Uncomment to deploy to a custom domain:
+# [[routes]]
+# pattern = "relay.yourdomain.com/*"
+# zone_name = "yourdomain.com"
+
+# Uncomment to use a Cloudflare service binding to a co-located ohttp-gateway Worker.
+# The service binding avoids an extra network hop and is available when both relay
+# and gateway are deployed in the same Cloudflare account.
+# [[services]]
+# binding = "GATEWAY"
+# service = "ohttp-gateway"
+
+[observability]
+enabled = true
+
+[vars]
+USE_SERVICE_BINDING = "false"
+GATEWAY_URL = "https://gateway.ohttp.info"
+MAX_REQUEST_SIZE = "1048576"
+CORS_ORIGIN = "*"
