@@ -12,10 +12,8 @@ import { createApp } from "./relay";
 
 interface Env {
 	/** Service binding to an ohttp-gateway Worker (optional, requires wrangler.toml [[services]]) */
-	GATEWAY: Fetcher;
-	/** Set to "true" to forward via GATEWAY service binding instead of GATEWAY_URL */
-	USE_SERVICE_BINDING: string;
-	/** Gateway base URL used when USE_SERVICE_BINDING is "false" */
+	GATEWAY?: Fetcher;
+	/** Gateway base URL used when GATEWAY service binding is not set */
 	GATEWAY_URL: string;
 	/** Maximum request body size in bytes */
 	MAX_REQUEST_SIZE: string;
@@ -31,7 +29,7 @@ export default {
 			gatewayUrl: env.GATEWAY_URL,
 			maxRequestSize: parseInt(env.MAX_REQUEST_SIZE, 10),
 			corsOrigin: env.CORS_ORIGIN,
-			...(env.USE_SERVICE_BINDING === "true" && { fetcher: env.GATEWAY.fetch.bind(env.GATEWAY) }),
+			...(env.GATEWAY && { fetcher: env.GATEWAY.fetch.bind(env.GATEWAY) }),
 		});
 		return app.fetch(request);
 	},

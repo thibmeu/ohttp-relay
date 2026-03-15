@@ -19,7 +19,6 @@ workers_dev = true
 enabled = true
 
 [vars]
-USE_SERVICE_BINDING = "false"
 GATEWAY_URL = "https://gateway.ohttp.info"
 MAX_REQUEST_SIZE = "1048576"
 CORS_ORIGIN = "*"

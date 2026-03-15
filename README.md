@@ -61,7 +61,6 @@ npm start
 If you deploy [ohttp-gateway](https://github.com/thibmeu/ohttp-gateway) as a Cloudflare Worker named `ohttp-gateway` in the same account, you can enable a service binding for lower latency (no extra network hop):
 
 1. Uncomment the `[[services]]` block in `wrangler.toml`
-2. Set `USE_SERVICE_BINDING = "true"` in `[vars]`
 
 ## Netlify configuration
 
