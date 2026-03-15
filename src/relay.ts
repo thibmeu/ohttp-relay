@@ -29,8 +29,29 @@ export interface RelayConfig {
 	fetcher?: typeof fetch;
 }
 
+export const defaults = {
+	gatewayUrl: "https://gateway.ohttp.info",
+	maxRequestSize: 1_048_576,
+	corsOrigin: "*",
+} as const;
+
+/**
+ * Build a RelayConfig from an environment variable getter.
+ * Use for Node.js/Vercel (`(k) => process.env[k]`) and Netlify (`(k) => Deno.env.get(k)`).
+ */
+export function configFromEnv(get: (key: string) => string | undefined): RelayConfig {
+	return {
+		gatewayUrl: get("GATEWAY_URL") ?? defaults.gatewayUrl,
+		maxRequestSize: parseInt(get("MAX_REQUEST_SIZE") ?? String(defaults.maxRequestSize), 10),
+		corsOrigin: get("CORS_ORIGIN") ?? defaults.corsOrigin,
+	};
+}
+
+const validContentTypes: readonly string[] = [MediaType.REQUEST, MediaType.CHUNKED_REQUEST];
+
 export function createApp(config: RelayConfig): Hono {
 	const app = new Hono();
+	const fetcher = config.fetcher ?? fetch;
 
 	app.use(
 		"*",
@@ -46,13 +67,12 @@ export function createApp(config: RelayConfig): Hono {
 
 	app.all("/*", async (c) => {
 		const { method } = c.req;
+		const contentType = c.req.header("Content-Type");
 
 		// Validate Content-Type on POST requests
 		if (method === "POST") {
-			const contentType = c.req.header("Content-Type");
-			const validTypes: string[] = [MediaType.REQUEST, MediaType.CHUNKED_REQUEST];
-			if (contentType === undefined || !validTypes.includes(contentType)) {
-				return c.json({ error: `Expected ${validTypes.join(" or ")}` }, 415);
+			if (contentType === undefined || !validContentTypes.includes(contentType)) {
+				return c.json({ error: `Expected ${validContentTypes.join(" or ")}` }, 415);
 			}
 
 			const contentLength = c.req.header("Content-Length");
@@ -65,15 +85,12 @@ export function createApp(config: RelayConfig): Hono {
 		// Strip all identifying headers — only forward Content-Type and Incremental.
 		// The gateway must only see the relay's identity, not the client's.
 		const headers = new Headers();
-		const contentType = c.req.header("Content-Type");
 		if (contentType !== undefined) headers.set("Content-Type", contentType);
 		const incremental = Incremental.get(c.req.raw.headers);
 		if (incremental !== undefined) Incremental.set(headers, incremental);
 
-		const path = new URL(c.req.url).pathname;
-		const fetcher = config.fetcher ?? fetch;
 		const hasBody = method !== "GET" && method !== "HEAD";
-		return fetcher(`${config.gatewayUrl}${path}`, {
+		return fetcher(`${config.gatewayUrl}${c.req.path}`, {
 			method,
 			headers,
 			...(hasBody && { body: c.req.raw.body }),

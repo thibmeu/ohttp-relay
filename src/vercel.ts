@@ -3,14 +3,8 @@
  */
 
 import { handle } from "hono/vercel";
-import { createApp } from "./relay";
+import { configFromEnv, createApp } from "./relay";
 
 export const config = { runtime: "edge" };
 
-export default handle(
-	createApp({
-		gatewayUrl: process.env.GATEWAY_URL ?? "https://gateway.ohttp.info",
-		maxRequestSize: parseInt(process.env.MAX_REQUEST_SIZE ?? "1048576", 10),
-		corsOrigin: process.env.CORS_ORIGIN ?? "*",
-	}),
-);
+export default handle(createApp(configFromEnv((k) => process.env[k])));

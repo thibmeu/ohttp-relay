@@ -3,13 +3,9 @@
  */
 
 import { serve } from "@hono/node-server";
-import { createApp } from "./relay";
+import { configFromEnv, createApp } from "./relay";
 
-const app = createApp({
-	gatewayUrl: process.env.GATEWAY_URL ?? "https://gateway.ohttp.info",
-	maxRequestSize: parseInt(process.env.MAX_REQUEST_SIZE ?? "1048576", 10),
-	corsOrigin: process.env.CORS_ORIGIN ?? "*",
-});
+const app = createApp(configFromEnv((k) => process.env[k]));
 
 serve(
 	{

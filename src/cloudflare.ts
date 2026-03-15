@@ -7,6 +7,7 @@
  * - Typed environment variable bindings via wrangler
  */
 
+import { type Hono } from "hono";
 import { createApp } from "./relay";
 
 interface Env {
@@ -22,13 +23,16 @@ interface Env {
 	CORS_ORIGIN: string;
 }
 
+let app: Hono | undefined;
+
 export default {
 	fetch(request: Request, env: Env) {
-		return createApp({
+		app ??= createApp({
 			gatewayUrl: env.GATEWAY_URL,
 			maxRequestSize: parseInt(env.MAX_REQUEST_SIZE, 10),
 			corsOrigin: env.CORS_ORIGIN,
 			...(env.USE_SERVICE_BINDING === "true" && { fetcher: env.GATEWAY.fetch.bind(env.GATEWAY) }),
-		}).fetch(request);
+		});
+		return app.fetch(request);
 	},
 };
