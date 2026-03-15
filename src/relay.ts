@@ -1,16 +1,13 @@
 /**
  * OHTTP Relay — platform-agnostic Hono app
  *
- * Implements RFC 9458 relay forwarding: passes encrypted OHTTP requests
- * to a gateway without decrypting them.
- *
- * Call createApp(config) to get a Hono app ready for any platform.
+ * Implements RFC 9458 relay forwarding: passes all requests through to the
+ * gateway without decrypting them. The relay only validates Content-Type on
+ * POST requests and strips identifying headers.
  *
  * Endpoints:
- * - POST /ohttp         → Forward to gateway (message/ohttp-req)
- * - POST /chunked-ohttp → Chunked forward (message/ohttp-chunked-req)
- * - GET  /ohttp-config  → Proxy gateway key configuration
- * - GET  /health        → Health check
+ * - GET  /health → Health check (relay-local, not forwarded)
+ * - *    /*      → Forwarded to gateway, preserving path
  */
 
 import { Hono } from "hono";
@@ -47,91 +44,41 @@ export function createApp(config: RelayConfig): Hono {
 
 	app.get("/health", (c) => c.text("OK"));
 
-	/**
-	 * GET /ohttp-config
-	 * Proxies key configuration from the gateway.
-	 * Compatibility alias used by some OHTTP clients (e.g. ferret).
-	 */
-	app.get("/ohttp-config", async (c) => {
-		try {
-			const fetcher = config.fetcher ?? fetch;
-			const resp = await fetcher(`${config.gatewayUrl}/ohttp-config`);
-			return new Response(resp.body, resp);
-		} catch (err) {
-			console.error("Key config fetch error:", err);
-			return c.json({ error: "Gateway unavailable" }, 502);
-		}
-	});
+	app.all("/*", async (c) => {
+		const { method } = c.req;
 
-	/**
-	 * POST /ohttp
-	 * Forwards an encapsulated OHTTP request to the gateway.
-	 * Relay MUST NOT decrypt — pure passthrough.
-	 */
-	app.post("/ohttp", async (c) => {
+		// Validate Content-Type on POST requests
+		if (method === "POST") {
+			const contentType = c.req.header("Content-Type");
+			const validTypes: string[] = [MediaType.REQUEST, MediaType.CHUNKED_REQUEST];
+			if (contentType === undefined || !validTypes.includes(contentType)) {
+				return c.json({ error: `Expected ${validTypes.join(" or ")}` }, 415);
+			}
+
+			const contentLength = c.req.header("Content-Length");
+			if (contentLength !== undefined && parseInt(contentLength, 10) > config.maxRequestSize) {
+				return c.json({ error: `Request exceeds ${config.maxRequestSize} byte limit` }, 413);
+			}
+		}
+
+		// Build forwarded headers.
+		// Strip all identifying headers — only forward Content-Type and Incremental.
+		// The gateway must only see the relay's identity, not the client's.
+		const headers = new Headers();
 		const contentType = c.req.header("Content-Type");
-		if (contentType !== undefined && contentType !== MediaType.REQUEST) {
-			return c.json({ error: `Expected ${MediaType.REQUEST}` }, 415);
-		}
+		if (contentType !== undefined) headers.set("Content-Type", contentType);
+		const incremental = Incremental.get(c.req.raw.headers);
+		if (incremental !== undefined) Incremental.set(headers, incremental);
 
-		const contentLength = c.req.header("Content-Length");
-		if (contentLength !== undefined && parseInt(contentLength, 10) > config.maxRequestSize) {
-			return c.json({ error: `Request exceeds ${config.maxRequestSize} byte limit` }, 413);
-		}
-
-		try {
-			return forwardToGateway(c.req.raw, config, "/ohttp");
-		} catch (err) {
-			console.error("Relay error:", err);
-			return c.json({ error: "Gateway unavailable" }, 502);
-		}
-	});
-
-	/**
-	 * POST /chunked-ohttp
-	 * Forwards a chunked (streaming) OHTTP request to the gateway.
-	 * Relay MUST NOT decrypt — pure streaming passthrough.
-	 */
-	app.post("/chunked-ohttp", async (c) => {
-		const contentType = c.req.header("Content-Type");
-		if (contentType !== MediaType.CHUNKED_REQUEST) {
-			return c.json({ error: `Expected ${MediaType.CHUNKED_REQUEST}` }, 415);
-		}
-
-		try {
-			return forwardToGateway(c.req.raw, config, "/chunked-ohttp", MediaType.CHUNKED_REQUEST);
-		} catch (err) {
-			console.error("Relay chunked error:", err);
-			return c.json({ error: "Gateway unavailable" }, 502);
-		}
+		const path = new URL(c.req.url).pathname;
+		const fetcher = config.fetcher ?? fetch;
+		const hasBody = method !== "GET" && method !== "HEAD";
+		return fetcher(`${config.gatewayUrl}${path}`, {
+			method,
+			headers,
+			...(hasBody && { body: c.req.raw.body }),
+		});
 	});
 
 	return app;
-}
-
-/**
- * Forward a request to the gateway.
- *
- * NOTE: Only Content-Type and Incremental headers are forwarded.
- * Client-identifying headers (IP, User-Agent, etc.) MUST NOT be forwarded —
- * the gateway must only see the relay's identity, not the client's.
- */
-async function forwardToGateway(
-	request: Request,
-	config: RelayConfig,
-	path: string,
-	contentType: string = MediaType.REQUEST,
-): Promise<Response> {
-	const headers = new Headers({ "Content-Type": contentType });
-	const incremental = Incremental.get(request.headers);
-	if (incremental !== undefined) {
-		Incremental.set(headers, incremental);
-	}
-
-	const fetcher = config.fetcher ?? fetch;
-	return fetcher(`${config.gatewayUrl}${path}`, {
-		method: "POST",
-		headers,
-		body: request.body,
-	});
 }
