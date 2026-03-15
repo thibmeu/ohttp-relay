@@ -1,10 +1,10 @@
 /**
- * OHTTP Relay — platform-agnostic core
+ * OHTTP Relay — platform-agnostic Hono app
  *
  * Implements RFC 9458 relay forwarding: passes encrypted OHTTP requests
  * to a gateway without decrypting them.
  *
- * Used by all platform adapters (Cloudflare Workers, Vercel, Netlify, Railway).
+ * Call createApp(config) to get a Hono app ready for any platform.
  *
  * Endpoints:
  * - POST /ohttp         → Forward to gateway (message/ohttp-req)
@@ -13,6 +13,8 @@
  * - GET  /health        → Health check
  */
 
+import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { Incremental, MediaType } from "ohttp-ts";
 
 export interface RelayConfig {
@@ -27,132 +29,84 @@ export interface RelayConfig {
 	 * Pass a Cloudflare service binding here for zero-latency gateway calls.
 	 * Defaults to the global fetch.
 	 */
-	fetcher?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+	fetcher?: typeof fetch;
 }
 
-function getCORSHeaders(config: RelayConfig): Record<string, string> {
-	return {
-		"Access-Control-Allow-Origin": config.corsOrigin,
-		"Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-		"Access-Control-Allow-Headers": "Content-Type, signature, signature-agent, signature-input",
-		"Access-Control-Max-Age": "86400",
-	};
-}
+export function createApp(config: RelayConfig): Hono {
+	const app = new Hono();
 
-function withCORS(response: Response, config: RelayConfig): Response {
-	const corsResponse = new Response(response.body, response);
-	for (const [key, value] of Object.entries(getCORSHeaders(config))) {
-		corsResponse.headers.set(key, value);
-	}
-	return corsResponse;
-}
-
-function errorResponse(status: number, message: string, config: RelayConfig): Response {
-	return withCORS(
-		new Response(JSON.stringify({ error: message }), {
-			status,
-			headers: { "Content-Type": "application/json" },
+	app.use(
+		"*",
+		cors({
+			origin: config.corsOrigin,
+			allowMethods: ["GET", "POST", "OPTIONS"],
+			allowHeaders: ["Content-Type", "signature", "signature-agent", "signature-input"],
+			maxAge: 86400,
 		}),
-		config,
 	);
-}
 
-export async function handleRequest(request: Request, config: RelayConfig): Promise<Response> {
-	const url = new URL(request.url);
+	app.get("/health", (c) => c.text("OK"));
 
-	if (request.method === "OPTIONS") {
-		return new Response(null, { status: 204, headers: getCORSHeaders(config) });
-	}
+	/**
+	 * GET /ohttp-config
+	 * Proxies key configuration from the gateway.
+	 * Compatibility alias used by some OHTTP clients (e.g. ferret).
+	 */
+	app.get("/ohttp-config", async (c) => {
+		try {
+			const fetcher = config.fetcher ?? fetch;
+			const resp = await fetcher(`${config.gatewayUrl}/ohttp-config`);
+			return new Response(resp.body, resp);
+		} catch (err) {
+			console.error("Key config fetch error:", err);
+			return c.json({ error: "Gateway unavailable" }, 502);
+		}
+	});
 
-	switch (url.pathname) {
-		case "/ohttp":
-			return handleOHTTP(request, config);
-		case "/ohttp-config":
-			return handleKeyConfig(request, config);
-		case "/chunked-ohttp":
-			return handleChunkedOHTTP(request, config);
-		case "/health":
-			return new Response("OK", { status: 200 });
-		default:
-			return errorResponse(404, "Not found", config);
-	}
-}
+	/**
+	 * POST /ohttp
+	 * Forwards an encapsulated OHTTP request to the gateway.
+	 * Relay MUST NOT decrypt — pure passthrough.
+	 */
+	app.post("/ohttp", async (c) => {
+		const contentType = c.req.header("Content-Type");
+		if (contentType !== undefined && contentType !== MediaType.REQUEST) {
+			return c.json({ error: `Expected ${MediaType.REQUEST}` }, 415);
+		}
 
-/**
- * GET /ohttp-config
- *
- * Proxies key configuration from the gateway.
- * Compatibility alias used by some OHTTP clients (e.g. ferret).
- */
-async function handleKeyConfig(request: Request, config: RelayConfig): Promise<Response> {
-	if (request.method !== "GET" && request.method !== "HEAD") {
-		return errorResponse(405, "Method not allowed", config);
-	}
+		const contentLength = c.req.header("Content-Length");
+		if (contentLength !== undefined && parseInt(contentLength, 10) > config.maxRequestSize) {
+			return c.json({ error: `Request exceeds ${config.maxRequestSize} byte limit` }, 413);
+		}
 
-	try {
-		const fetcher = config.fetcher ?? fetch;
-		const response = await fetcher(`${config.gatewayUrl}/ohttp-config`, { method: request.method });
-		return withCORS(response, config);
-	} catch (error) {
-		console.error("Key config fetch error:", error);
-		return errorResponse(502, "Gateway unavailable", config);
-	}
-}
+		try {
+			return forwardToGateway(c.req.raw, config, "/ohttp");
+		} catch (err) {
+			console.error("Relay error:", err);
+			return c.json({ error: "Gateway unavailable" }, 502);
+		}
+	});
 
-/**
- * POST /ohttp
- *
- * Forwards an encapsulated OHTTP request to the gateway.
- * Relay MUST NOT decrypt — pure passthrough.
- */
-async function handleOHTTP(request: Request, config: RelayConfig): Promise<Response> {
-	if (request.method !== "POST") {
-		return errorResponse(405, "Method not allowed", config);
-	}
+	/**
+	 * POST /chunked-ohttp
+	 * Forwards a chunked (streaming) OHTTP request to the gateway.
+	 * Relay MUST NOT decrypt — pure streaming passthrough.
+	 */
+	app.post("/chunked-ohttp", async (c) => {
+		const contentType = c.req.header("Content-Type");
+		if (contentType !== MediaType.CHUNKED_REQUEST) {
+			return c.json({ error: `Expected ${MediaType.CHUNKED_REQUEST}` }, 415);
+		}
 
-	const contentType = request.headers.get("Content-Type");
-	if (contentType !== null && contentType !== MediaType.REQUEST) {
-		return errorResponse(415, `Expected ${MediaType.REQUEST}`, config);
-	}
+		try {
+			return forwardToGateway(c.req.raw, config, "/chunked-ohttp", MediaType.CHUNKED_REQUEST);
+		} catch (err) {
+			console.error("Relay chunked error:", err);
+			return c.json({ error: "Gateway unavailable" }, 502);
+		}
+	});
 
-	const contentLength = request.headers.get("Content-Length");
-	if (contentLength !== null && parseInt(contentLength, 10) > config.maxRequestSize) {
-		return errorResponse(413, `Request exceeds ${config.maxRequestSize} byte limit`, config);
-	}
-
-	try {
-		return withCORS(await forwardToGateway(request, config, "/ohttp"), config);
-	} catch (error) {
-		console.error("Relay error:", error);
-		return errorResponse(502, "Gateway unavailable", config);
-	}
-}
-
-/**
- * POST /chunked-ohttp
- *
- * Forwards a chunked (streaming) OHTTP request to the gateway.
- * Relay MUST NOT decrypt — pure streaming passthrough.
- */
-async function handleChunkedOHTTP(request: Request, config: RelayConfig): Promise<Response> {
-	if (request.method !== "POST") {
-		return errorResponse(405, "Method not allowed", config);
-	}
-
-	const contentType = request.headers.get("Content-Type");
-	if (contentType !== MediaType.CHUNKED_REQUEST) {
-		return errorResponse(415, `Expected ${MediaType.CHUNKED_REQUEST}`, config);
-	}
-
-	try {
-		return withCORS(
-			await forwardToGateway(request, config, "/chunked-ohttp", MediaType.CHUNKED_REQUEST),
-			config,
-		);
-	} catch (error) {
-		console.error("Relay chunked error:", error);
-		return errorResponse(502, "Gateway unavailable", config);
-	}
+	return app;
 }
 
 /**
@@ -174,7 +128,10 @@ async function forwardToGateway(
 		Incremental.set(headers, incremental);
 	}
 
-	const url = `${config.gatewayUrl}${path}`;
 	const fetcher = config.fetcher ?? fetch;
-	return fetcher(url, { method: "POST", headers, body: request.body });
+	return fetcher(`${config.gatewayUrl}${path}`, {
+		method: "POST",
+		headers,
+		body: request.body,
+	});
 }

@@ -15,6 +15,8 @@
     "lint": "biome check src api"
   },
   "dependencies": {
+    "@hono/node-server": "^1.19.11",
+    "hono": "^4.12.8",
     "ohttp-ts": "^0.2.4"
   },
   "devDependencies": {
