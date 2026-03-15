@@ -13,14 +13,6 @@ Forwards encrypted OHTTP requests to a gateway without decrypting them, preservi
 | Netlify | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/thibmeu/ohttp-relay) | Edge (Deno) |
 | Railway | [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template/ohttp-relay) | Node.js |
 
-Fly.io does not have a deploy button. Use the CLI:
-
-```bash
-fly launch --no-deploy
-fly secrets set GATEWAY_URL=https://gateway.ohttp.info
-fly deploy
-```
-
 ## Configuration
 
 | Variable | Default | Description |
@@ -30,14 +22,14 @@ fly deploy
 | `MAX_REQUEST_SIZE` | `1048576` | Maximum request body size (bytes) |
 | `PORT` | `3000` | Listening port (Node.js only) |
 
-## Endpoints
+## Protocol
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/ohttp` | POST | Forward OHTTP encapsulated request to gateway |
-| `/chunked-ohttp` | POST | Forward chunked (streaming) OHTTP request |
-| `/ohttp-config` | GET | Proxy gateway key configuration |
-| `/health` | GET | Health check |
+All requests are forwarded to the gateway at the same path. The `Content-Type` header determines the OHTTP variant:
+
+| Content-Type | Description |
+|---|---|
+| `message/ohttp-req` | Standard OHTTP (RFC 9458) |
+| `message/ohttp-chunked-req` | Chunked OHTTP (streaming) |
 
 ## Development
 
