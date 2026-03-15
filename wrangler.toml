@@ -1,5 +1,5 @@
 name = "ohttp-relay"
-main = "src/index.ts"
+main = "src/cloudflare.ts"
 compatibility_date = "2025-03-10"
 workers_dev = true
 

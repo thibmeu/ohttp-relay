@@ -6,12 +6,20 @@ Forwards encrypted OHTTP requests to a gateway without decrypting them, preservi
 
 ## Deploy
 
-| Platform | | Notes |
+| Platform | | Runtime |
 |---|---|---|
-| Cloudflare Workers | [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/thibmeu/ohttp-relay) | Native Workers runtime |
-| Vercel | [![Deploy with Vercel](https://vercel.com/button.svg)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fthibmeu%2Fohttp-relay&env=GATEWAY_URL&envDescription=Base+URL+of+the+OHTTP+gateway&envLink=https%3A%2F%2Fgithub.com%2Fthibmeu%2Fohttp-relay%23configuration&project-name=ohttp-relay&repository-name=ohttp-relay) | Edge Runtime |
-| Netlify | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/thibmeu/ohttp-relay) | Edge Functions (Deno) |
+| Cloudflare Workers | [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/thibmeu/ohttp-relay) | Workers (native) |
+| Vercel | [![Deploy with Vercel](https://vercel.com/button.svg)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fthibmeu%2Fohttp-relay&env=GATEWAY_URL&envDescription=Base+URL+of+the+OHTTP+gateway&envLink=https%3A%2F%2Fgithub.com%2Fthibmeu%2Fohttp-relay%23configuration&project-name=ohttp-relay&repository-name=ohttp-relay) | Edge |
+| Netlify | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/thibmeu/ohttp-relay) | Edge (Deno) |
 | Railway | [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template/ohttp-relay) | Node.js |
+
+Fly.io does not have a deploy button. Use the CLI:
+
+```bash
+fly launch --no-deploy
+fly secrets set GATEWAY_URL=https://gateway.ohttp.info
+fly deploy
+```
 
 ## Configuration
 
