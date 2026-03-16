@@ -4,13 +4,13 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=18"
+    "node": ">=22.6"
   },
   "scripts": {
-    "build": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.js",
+    "build": "true",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "start": "node dist/server.js",
+    "start": "node --experimental-strip-types src/server.ts",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src"
   },
@@ -23,7 +23,6 @@
     "@biomejs/biome": "^1.9.0",
     "@cloudflare/workers-types": "^4.20250224.0",
     "@types/node": "^22.0.0",
-    "esbuild": "^0.25.0",
     "tsx": "^4.0.0",
     "typescript": "^5.7.0",
     "wrangler": "^4.0.0"

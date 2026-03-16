@@ -3,7 +3,7 @@
  */
 
 import { serve } from "@hono/node-server";
-import { configFromEnv, createApp } from "./relay";
+import { configFromEnv, createApp } from "./relay.ts";
 
 const app = createApp(configFromEnv((k) => process.env[k]));
 
