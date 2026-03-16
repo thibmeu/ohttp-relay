@@ -1,3 +1,6 @@
+[build]
+  builder = "nixpacks"
+
 [deploy]
   startCommand = "npm start"
   healthcheckPath = "/health"
