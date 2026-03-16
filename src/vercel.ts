@@ -1,10 +1,7 @@
 /**
- * OHTTP Relay — Vercel Edge Function entry point
+ * OHTTP Relay — Vercel Hono app
  */
 
-import { handle } from "hono/vercel";
 import { configFromEnv, createApp } from "./relay.js";
 
-export const config = { runtime: "edge" };
-
-export default handle(createApp(configFromEnv((k) => process.env[k])));
+export default createApp(configFromEnv((k) => process.env[k]));
