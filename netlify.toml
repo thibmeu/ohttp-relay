@@ -1,6 +1,9 @@
 [build]
   edge_functions = "netlify/edge-functions"
 
+[build.environment]
+  NODE_VERSION = "24"
+
 [[edge_functions]]
   path = "/*"
   function = "netlify"
