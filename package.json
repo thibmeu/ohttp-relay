@@ -7,7 +7,7 @@
     "node": "24.x"
   },
   "scripts": {
-    "build": "true",
+    "build": "mkdir -p dist",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "start": "node --experimental-strip-types src/server.ts",
