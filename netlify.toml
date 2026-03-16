@@ -1,5 +1,5 @@
 [build]
-  edge_functions = "src"
+  edge_functions = "netlify/edge-functions"
 
 [[edge_functions]]
   path = "/*"

@@ -1,10 +1,7 @@
 /**
- * OHTTP Relay — Netlify Edge Function entry point
+ * OHTTP Relay — Netlify Hono app
  */
 
-import { handle } from "hono/netlify";
-import { configFromEnv, createApp } from "./relay";
+import { configFromEnv, createApp } from "./relay.js";
 
-export default handle(createApp(configFromEnv((k) => Deno.env.get(k))));
-
-export const config = { path: "/*" };
+export default createApp(configFromEnv((k) => Deno.env.get(k)));
