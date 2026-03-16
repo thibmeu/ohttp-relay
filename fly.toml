@@ -14,6 +14,6 @@ primary_region = "iad"
     timeout = "5s"
 
 [env]
-  GATEWAY_URL = "https://gateway.ohttp.info"
+  GATEWAY_URL = "https://gateway.ohttp.info/ohttp"
   MAX_REQUEST_SIZE = "1048576"
   CORS_ORIGIN = "*"
