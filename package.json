@@ -17,13 +17,13 @@
   "dependencies": {
     "@hono/node-server": "^1.19.11",
     "hono": "^4.12.8",
-    "ohttp-ts": "^0.2.4"
+    "ohttp-ts": "^0.2.4",
+    "tsx": "^4.0.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
     "@cloudflare/workers-types": "^4.20250224.0",
     "@types/node": "^22.0.0",
-    "tsx": "^4.0.0",
     "typescript": "^5.7.0",
     "wrangler": "^4.0.0"
   }
