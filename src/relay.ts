@@ -93,8 +93,8 @@ export function createApp(config: RelayConfig): Hono {
 		const upstream = await fetcher(config.gatewayUrl, {
 			method,
 			headers,
-			...(hasBody && { body: c.req.raw.body }),
-		});
+			...(hasBody && { body: c.req.raw.body, duplex: "half" }),
+		} as RequestInit);
 		// Wrap in a new Response so CORS middleware can mutate headers
 		// (fetch Response headers are immutable in Node.js)
 		return new Response(upstream.body, upstream);
