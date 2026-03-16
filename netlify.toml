@@ -1,5 +1,6 @@
 [build]
   edge_functions = "netlify/edge-functions"
+  publish = "."
 
 [build.environment]
   NODE_VERSION = "24"
@@ -7,3 +8,7 @@
 [[edge_functions]]
   path = "/*"
   function = "netlify"
+
+[template.environment]
+  GATEWAY_URL = { required = true, description = "OHTTP gateway URL (e.g. https://gateway.ohttp.info/ohttp)" }
+  CORS_ORIGIN = { description = "Allowed CORS origin (default: *)" }
