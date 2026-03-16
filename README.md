@@ -30,7 +30,7 @@ Forwards encrypted OHTTP requests to a gateway without decrypting them, preservi
 
 | Variable | Default | Description |
 |---|---|---|
-| `GATEWAY_URL` | `https://gateway.ohttp.info` | Base URL of the OHTTP gateway |
+| `GATEWAY_URL` | `https://gateway.ohttp.info/ohttp` | Full URL of the gateway's oblivious request resource |
 | `CORS_ORIGIN` | `*` | Allowed CORS origin |
 | `MAX_REQUEST_SIZE` | `1048576` | Maximum request body size (bytes) |
 | `PORT` | `3000` | Listening port (Node.js only) |

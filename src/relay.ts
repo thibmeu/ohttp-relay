@@ -30,7 +30,7 @@ export interface RelayConfig {
 }
 
 export const defaults = {
-	gatewayUrl: "https://gateway.ohttp.info",
+	gatewayUrl: "https://gateway.ohttp.info/ohttp",
 	maxRequestSize: 1_048_576,
 	corsOrigin: "*",
 } as const;
@@ -90,7 +90,7 @@ export function createApp(config: RelayConfig): Hono {
 		if (incremental !== undefined) Incremental.set(headers, incremental);
 
 		const hasBody = method !== "GET" && method !== "HEAD";
-		return fetcher(`${config.gatewayUrl}${c.req.path}`, {
+		return fetcher(config.gatewayUrl, {
 			method,
 			headers,
 			...(hasBody && { body: c.req.raw.body }),

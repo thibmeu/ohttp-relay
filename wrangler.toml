@@ -19,6 +19,6 @@ workers_dev = true
 enabled = true
 
 [vars]
-GATEWAY_URL = "https://gateway.ohttp.info"
+GATEWAY_URL = "https://gateway.ohttp.info/ohttp"
 MAX_REQUEST_SIZE = "1048576"
 CORS_ORIGIN = "*"
