@@ -7,23 +7,24 @@
     "node": ">=18"
   },
   "scripts": {
-    "build": "true",
+    "build": "esbuild src/server.ts --bundle --platform=node --format=esm --outfile=dist/server.js",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "start": "tsx src/server.ts",
+    "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.11",
     "hono": "^4.12.8",
-    "ohttp-ts": "^0.2.4",
-    "tsx": "^4.0.0"
+    "ohttp-ts": "^0.2.4"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
     "@cloudflare/workers-types": "^4.20250224.0",
     "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.0.0",
     "typescript": "^5.7.0",
     "wrangler": "^4.0.0"
   }
