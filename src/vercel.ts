@@ -3,7 +3,7 @@
  */
 
 import { handle } from "hono/vercel";
-import { configFromEnv, createApp } from "./relay";
+import { configFromEnv, createApp } from "./relay.js";
 
 export const config = { runtime: "edge" };
 
