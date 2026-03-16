@@ -90,11 +90,14 @@ export function createApp(config: RelayConfig): Hono {
 		if (incremental !== undefined) Incremental.set(headers, incremental);
 
 		const hasBody = method !== "GET" && method !== "HEAD";
-		return fetcher(config.gatewayUrl, {
+		const upstream = await fetcher(config.gatewayUrl, {
 			method,
 			headers,
 			...(hasBody && { body: c.req.raw.body }),
 		});
+		// Wrap in a new Response so CORS middleware can mutate headers
+		// (fetch Response headers are immutable in Node.js)
+		return new Response(upstream.body, upstream);
 	});
 
 	return app;
