@@ -7,3 +7,4 @@
 [[edge_functions]]
   path = "/*"
   function = "netlify"
+  import_map = "./netlify/edge-functions/import_map.json"

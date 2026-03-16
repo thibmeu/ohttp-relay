@@ -1,0 +1,8 @@
+{
+	"imports": {
+		"hono": "npm:hono",
+		"hono/": "npm:hono/",
+		"ohttp-ts": "npm:ohttp-ts",
+		"ohttp-ts/": "npm:ohttp-ts/"
+	}
+}
