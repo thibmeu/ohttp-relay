@@ -17,7 +17,7 @@
   "dependencies": {
     "@hono/node-server": "^1.19.11",
     "hono": "^4.12.8",
-    "ohttp-ts": "^0.3.0"
+    "ohttp-ts": "^0.3.5"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
