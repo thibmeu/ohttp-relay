@@ -1,12 +1,30 @@
 import { MediaType } from "ohttp-ts";
 import { describe, expect, it } from "vitest";
-import { createApp } from "../src/relay.ts";
+import { configFromEnv, createApp } from "../src/relay.ts";
 
 const config = {
 	gatewayUrl: "https://gateway.example/ohttp",
 	maxRequestSize: 1_048_576,
 	corsOrigin: "*",
 };
+
+describe("configFromEnv", () => {
+	it("throws when GATEWAY_URL is missing instead of defaulting", () => {
+		expect(() => configFromEnv(() => undefined)).toThrow(/GATEWAY_URL/);
+		expect(() =>
+			configFromEnv((k) => (k === "GATEWAY_URL" ? "" : undefined)),
+		).toThrow(/GATEWAY_URL/);
+	});
+
+	it("uses the provided GATEWAY_URL and falls back for optional settings", () => {
+		const cfg = configFromEnv((k) =>
+			k === "GATEWAY_URL" ? "https://gateway.example/ohttp" : undefined,
+		);
+		expect(cfg.gatewayUrl).toBe("https://gateway.example/ohttp");
+		expect(cfg.maxRequestSize).toBe(1_048_576);
+		expect(cfg.corsOrigin).toBe("*");
+	});
+});
 
 describe("relay", () => {
 	it("serves a health check without forwarding", async () => {

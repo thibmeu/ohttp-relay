@@ -30,7 +30,6 @@ export interface RelayConfig {
 }
 
 export const defaults = {
-	gatewayUrl: "https://gateway.ohttp.info/ohttp",
 	maxRequestSize: 1_048_576,
 	corsOrigin: "*",
 } as const;
@@ -38,12 +37,21 @@ export const defaults = {
 /**
  * Build a RelayConfig from an environment variable getter.
  * Use for Node.js/Vercel (`(k) => process.env[k]`) and Netlify (`(k) => Deno.env.get(k)`).
+ *
+ * `GATEWAY_URL` is required: without it the relay would silently forward
+ * traffic to an unintended host, so we fail closed instead of defaulting.
  */
 export function configFromEnv(
 	get: (key: string) => string | undefined,
 ): RelayConfig {
+	const gatewayUrl = get("GATEWAY_URL");
+	if (gatewayUrl === undefined || gatewayUrl === "") {
+		throw new Error(
+			"GATEWAY_URL is required: set it to your OHTTP gateway URL (e.g. https://gateway.ohttp.info/ohttp)",
+		);
+	}
 	return {
-		gatewayUrl: get("GATEWAY_URL") ?? defaults.gatewayUrl,
+		gatewayUrl,
 		maxRequestSize: Number.parseInt(
 			get("MAX_REQUEST_SIZE") ?? String(defaults.maxRequestSize),
 			10,
