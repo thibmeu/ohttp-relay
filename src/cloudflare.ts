@@ -7,7 +7,7 @@
  * - Typed environment variable bindings via wrangler
  */
 
-import { type Hono } from "hono";
+import type { Hono } from "hono";
 import { createApp } from "./relay";
 
 interface Env {
@@ -27,7 +27,7 @@ export default {
 	fetch(request: Request, env: Env) {
 		app ??= createApp({
 			gatewayUrl: env.GATEWAY_URL,
-			maxRequestSize: parseInt(env.MAX_REQUEST_SIZE, 10),
+			maxRequestSize: Number.parseInt(env.MAX_REQUEST_SIZE, 10),
 			corsOrigin: env.CORS_ORIGIN,
 			...(env.GATEWAY && { fetcher: env.GATEWAY.fetch.bind(env.GATEWAY) }),
 		});

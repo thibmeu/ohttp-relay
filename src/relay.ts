@@ -39,15 +39,23 @@ export const defaults = {
  * Build a RelayConfig from an environment variable getter.
  * Use for Node.js/Vercel (`(k) => process.env[k]`) and Netlify (`(k) => Deno.env.get(k)`).
  */
-export function configFromEnv(get: (key: string) => string | undefined): RelayConfig {
+export function configFromEnv(
+	get: (key: string) => string | undefined,
+): RelayConfig {
 	return {
 		gatewayUrl: get("GATEWAY_URL") ?? defaults.gatewayUrl,
-		maxRequestSize: parseInt(get("MAX_REQUEST_SIZE") ?? String(defaults.maxRequestSize), 10),
+		maxRequestSize: Number.parseInt(
+			get("MAX_REQUEST_SIZE") ?? String(defaults.maxRequestSize),
+			10,
+		),
 		corsOrigin: get("CORS_ORIGIN") ?? defaults.corsOrigin,
 	};
 }
 
-const validContentTypes: readonly string[] = [MediaType.REQUEST, MediaType.CHUNKED_REQUEST];
+const validContentTypes: readonly string[] = [
+	MediaType.REQUEST,
+	MediaType.CHUNKED_REQUEST,
+];
 
 export function createApp(config: RelayConfig): Hono {
 	const app = new Hono();
@@ -58,7 +66,12 @@ export function createApp(config: RelayConfig): Hono {
 		cors({
 			origin: config.corsOrigin,
 			allowMethods: ["GET", "POST", "OPTIONS"],
-			allowHeaders: ["Content-Type", "signature", "signature-agent", "signature-input"],
+			allowHeaders: [
+				"Content-Type",
+				"signature",
+				"signature-agent",
+				"signature-input",
+			],
 			maxAge: 86400,
 		}),
 	);
@@ -71,13 +84,25 @@ export function createApp(config: RelayConfig): Hono {
 
 		// Validate Content-Type on POST requests
 		if (method === "POST") {
-			if (contentType === undefined || !validContentTypes.includes(contentType)) {
-				return c.json({ error: `Expected ${validContentTypes.join(" or ")}` }, 415);
+			if (
+				contentType === undefined ||
+				!validContentTypes.includes(contentType)
+			) {
+				return c.json(
+					{ error: `Expected ${validContentTypes.join(" or ")}` },
+					415,
+				);
 			}
 
 			const contentLength = c.req.header("Content-Length");
-			if (contentLength !== undefined && parseInt(contentLength, 10) > config.maxRequestSize) {
-				return c.json({ error: `Request exceeds ${config.maxRequestSize} byte limit` }, 413);
+			if (
+				contentLength !== undefined &&
+				Number.parseInt(contentLength, 10) > config.maxRequestSize
+			) {
+				return c.json(
+					{ error: `Request exceeds ${config.maxRequestSize} byte limit` },
+					413,
+				);
 			}
 		}
 

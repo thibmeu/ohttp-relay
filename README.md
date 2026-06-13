@@ -15,6 +15,7 @@ Forwards encrypted OHTTP requests to a gateway without decrypting them, preservi
 - [Protocol](#protocol)
 - [Development](#development)
 - [Architecture](#architecture)
+- [Security considerations](#security-considerations)
 - [License](#license)
 
 ## Deploy
@@ -64,6 +65,11 @@ npm run dev
 
 # Node.js server
 npm start
+
+# Tests, types, lint
+npm test
+npm run typecheck
+npm run lint
 ```
 
 ## Architecture
@@ -75,6 +81,28 @@ Client → Relay → Gateway → Target
 ```
 
 The relay is a pure passthrough — it never decrypts OHTTP messages. This is what provides the privacy guarantee: the gateway learns what the client requested but not who made the request; the relay knows who made the request but not what was requested.
+
+## Security considerations
+
+This software has not been audited. Use it at your own discretion.
+
+The relay never holds OHTTP keys and never decrypts traffic. It forwards
+encapsulated requests ([RFC 9458](https://www.rfc-editor.org/rfc/rfc9458) and the
+chunked extension
+[draft-ietf-ohai-chunked-ohttp](https://datatracker.ietf.org/doc/draft-ietf-ohai-chunked-ohttp/))
+to the gateway as opaque bytes. To hide who the client is, it strips every client
+header except the OHTTP `Content-Type` and the `Incremental` indicator: cookies,
+`Authorization`, `User-Agent`, `X-Forwarded-For` and everything else are dropped
+before forwarding. The relay also does not log request contents.
+
+The privacy guarantee holds only when the relay and the
+[gateway](https://github.com/thibmeu/ohttp-gateway) are run by separate,
+non-colluding parties. If one operator runs both, they can link the client to the
+request, which is no better than a direct connection.
+
+TLS terminates at the relay, so its host sees client IP addresses. Part of the
+trust model is choosing a relay operator, separate from the gateway operator, that
+you trust not to log or correlate connections.
 
 ## License
 

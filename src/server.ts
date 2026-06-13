@@ -10,7 +10,7 @@ const app = createApp(configFromEnv((k) => process.env[k]));
 serve(
 	{
 		fetch: app.fetch,
-		port: parseInt(process.env.PORT ?? "3000", 10),
+		port: Number.parseInt(process.env.PORT ?? "3000", 10),
 		hostname: "0.0.0.0",
 	},
 	(info) => {
