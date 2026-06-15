@@ -20,6 +20,8 @@ Forwards encrypted OHTTP requests to a gateway without decrypting them, preservi
 
 ## Deploy
 
+OHTTP requires the relay and [gateway](https://github.com/thibmeu/ohttp-gateway) be operated by different entities. We list several platforms so you can put each on a different provider: one provider operating both could attribute requests to clients.
+
 | Platform | | Runtime |
 |---|---|---|
 | Cloudflare | [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/thibmeu/ohttp-relay) | Workers |
