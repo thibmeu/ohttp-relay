@@ -23,11 +23,11 @@
     "ohttp-ts": "^0.3.5"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.0",
-    "@cloudflare/workers-types": "^4.20260613.1",
-    "@types/node": "^25.9.3",
+    "@biomejs/biome": "^2.5.2",
+    "@cloudflare/workers-types": "^5.20260704.1",
+    "@types/node": "^26.1.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8",
-    "wrangler": "^4.100.0"
+    "vitest": "^4.1.9",
+    "wrangler": "^4.107.0"
   }
 }
