@@ -29,3 +29,47 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+
+  platforms:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: npm ci
+
+      - name: Cloudflare - bundle the Worker and check wrangler.toml
+        run: npx wrangler deploy --dry-run --outdir /tmp/worker
+
+      - name: Netlify - resolve the edge function on Deno
+        run: >
+          deno bundle --node-modules-dir=none
+          --import-map=netlify/edge-functions/import_map.json
+          -o /tmp/netlify.js netlify/edge-functions/netlify.ts
+
+      - name: Railway - build the image with production deps only
+        run: docker build -t ohttp-relay .
+
+      - name: Railway - boot the container and answer on both paths
+        run: |
+          docker run -d --rm --name relay -p 8787:3000 \
+            -e GATEWAY_URL=https://gateway.ohttp.info/ohttp ohttp-relay
+          for _ in $(seq 40); do
+            curl -sf http://127.0.0.1:8787/health >/dev/null && break
+            sleep 0.5
+          done
+          curl -sf http://127.0.0.1:8787/health | grep -qx OK
+          # The gateway is never reached: a bad Content-Type is rejected by the
+          # relay itself, so this needs no credentials and no live gateway.
+          curl -s -o /dev/null -w '%{http_code}' -X POST --data x \
+            -H 'Content-Type: text/plain' http://127.0.0.1:8787/ \
+            | grep -qx 415
+
+      - name: Railway - container logs
+        if: always()
+        run: docker logs relay && docker stop relay
