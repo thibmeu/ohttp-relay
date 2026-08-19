@@ -1,4 +1,7 @@
-import { handle } from "hono/netlify";
-import app from "../../src/netlify.ts";
+/**
+ * OHTTP Relay — Netlify edge function
+ */
 
-export default handle(app);
+import { configFromEnv, createApp } from "../../src/relay.ts";
+
+export default createApp(configFromEnv((k) => Deno.env.get(k))).fetch;

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=24"
+    "node": ">=24.2"
   },
   "scripts": {
     "build": "mkdir -p dist",
@@ -14,20 +14,18 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check src test",
-    "format": "biome format --write src test"
+    "lint": "biome check src test api netlify",
+    "format": "biome format --write src test api netlify"
   },
   "dependencies": {
-    "@hono/node-server": "^2.0.4",
-    "hono": "^4.12.25",
-    "ohttp-ts": "^0.3.5"
+    "ohttp-ts": "^0.4.1"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.0",
-    "@cloudflare/workers-types": "^4.20260613.1",
+    "@cloudflare/workers-types": "^5.20260815.1",
     "@types/node": "^25.9.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8",
-    "wrangler": "^4.100.0"
+    "wrangler": "^4.124.0"
   }
 }

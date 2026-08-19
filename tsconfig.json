@@ -11,8 +11,16 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true
   },
-  "include": ["src/relay.ts", "src/cloudflare.ts", "src/vercel.ts"],
+  "include": [
+    "src/core.ts",
+    "src/relay.ts",
+    "src/server.ts",
+    "src/cloudflare.ts",
+    "api",
+    "test"
+  ],
   "exclude": ["node_modules"]
 }

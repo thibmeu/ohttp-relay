@@ -84,6 +84,19 @@ Client → Relay → Gateway → Target
 
 The relay is a pure passthrough — it never decrypts OHTTP messages. This is what provides the privacy guarantee: the gateway learns what the client requested but not who made the request; the relay knows who made the request but not what was requested.
 
+There is no HTTP framework. The relay has two endpoints and forwards everything
+else, so routing is a path comparison and the request never needs an abstraction
+over it:
+
+| File | Used by | Forwards with |
+|---|---|---|
+| `src/core.ts` | both | — (platform-neutral decisions) |
+| `src/relay.ts` | Cloudflare, Vercel, Netlify | Fetch API |
+| `src/server.ts` | Node.js | `node:http` |
+
+The Node server drives `node:http` on both sides rather than converting through
+`Request`/`Response`, so it sends exactly the headers it is told to — see below.
+
 ## Security considerations
 
 This software has not been audited. Use it at your own discretion.
@@ -96,6 +109,12 @@ to the gateway as opaque bytes. To hide who the client is, it strips every clien
 header except the OHTTP `Content-Type` and the `Incremental` indicator: cookies,
 `Authorization`, `User-Agent`, `X-Forwarded-For` and everything else are dropped
 before forwarding. The relay also does not log request contents.
+
+On Node.js that set is exact, and a test asserts it. On edge platforms the
+runtime's own `fetch` may append headers of its own — `undici` adds `accept`,
+`accept-language`, `sec-fetch-mode`, `user-agent` and `accept-encoding`, for
+instance. Those carry no client identity, but they do tell the gateway which
+runtime the relay is on, and we cannot suppress them from inside the handler.
 
 The privacy guarantee holds only when the relay and the
 [gateway](https://github.com/thibmeu/ohttp-gateway) are run by separate,

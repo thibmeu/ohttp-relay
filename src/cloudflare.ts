@@ -7,8 +7,8 @@
  * - Typed environment variable bindings via wrangler
  */
 
-import type { Hono } from "hono";
-import { createApp } from "./relay";
+import { parseSize } from "./core.ts";
+import { createApp, type RelayApp } from "./relay.ts";
 
 interface Env {
 	/** Service binding to an ohttp-gateway Worker (optional, requires wrangler.toml [[services]]) */
@@ -21,14 +21,16 @@ interface Env {
 	CORS_ORIGIN: string;
 }
 
-let app: Hono | undefined;
+let app: RelayApp | undefined;
 
 export default {
 	fetch(request: Request, env: Env) {
 		app ??= createApp({
 			gatewayUrl: env.GATEWAY_URL,
-			maxRequestSize: Number.parseInt(env.MAX_REQUEST_SIZE, 10),
-			corsOrigin: env.CORS_ORIGIN,
+			// Same fallbacks as configFromEnv: a missing or malformed var must not
+			// become NaN, which every size check would compare false against.
+			maxRequestSize: parseSize(env.MAX_REQUEST_SIZE),
+			corsOrigin: env.CORS_ORIGIN || "*",
 			...(env.GATEWAY && { fetcher: env.GATEWAY.fetch.bind(env.GATEWAY) }),
 		});
 		return app.fetch(request);

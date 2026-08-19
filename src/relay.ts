@@ -1,137 +1,143 @@
 /**
- * OHTTP Relay — platform-agnostic Hono app
+ * OHTTP Relay — platform-agnostic Fetch API handler
  *
- * Implements RFC 9458 relay forwarding: passes all requests through to the
- * gateway without decrypting them. The relay only validates Content-Type on
- * POST requests and strips identifying headers.
+ * Passes requests through to the gateway without decrypting them (RFC 9458),
+ * validating Content-Type on POST and stripping identifying headers.
  *
- * Endpoints:
- * - GET  /health → Health check (relay-local, not forwarded)
- * - *    /*      → Forwarded to gateway, preserving path
+ * Used by every platform whose runtime speaks the Fetch API. Node does not come
+ * through here — server.ts drives node:http end to end instead.
+ *
+ * - GET /health → answered locally, never forwarded
+ * - everything else → forwarded to the gateway
  */
 
-import { Hono } from "hono";
-import { cors } from "hono/cors";
-import { Incremental, MediaType } from "ohttp-ts";
+import {
+	corsHeaders,
+	forwardHeaders,
+	type RelayConfig,
+	rejectPost,
+	stripHopByHop,
+} from "./core.ts";
 
-export interface RelayConfig {
-	/** Gateway base URL (e.g. https://gateway.ohttp.info) */
-	gatewayUrl: string;
-	/** Maximum request body size in bytes */
-	maxRequestSize: number;
-	/** CORS allowed origin */
-	corsOrigin: string;
-	/**
-	 * Optional custom fetch implementation.
-	 * Pass a Cloudflare service binding here for zero-latency gateway calls.
-	 * Defaults to the global fetch.
-	 */
-	fetcher?: typeof fetch;
+export { configFromEnv, type RelayConfig } from "./core.ts";
+
+export interface RelayApp {
+	fetch: (request: Request) => Promise<Response>;
 }
 
-export const defaults = {
-	maxRequestSize: 1_048_576,
-	corsOrigin: "*",
-} as const;
-
 /**
- * Build a RelayConfig from an environment variable getter.
- * Use for Node.js/Vercel (`(k) => process.env[k]`) and Netlify (`(k) => Deno.env.get(k)`).
+ * Count the body as it streams and cut it off past the limit.
  *
- * `GATEWAY_URL` is required: without it the relay would silently forward
- * traffic to an unintended host, so we fail closed instead of defaulting.
+ * The up-front check reads Content-Length, which a chunked request — the case
+ * `message/ohttp-chunked-req` exists for — arrives without. `over` is read
+ * after the fetch settles: erroring the request stream surfaces as a transport
+ * failure, not as our own error object.
+ *
+ * A transform only runs while something pulls it, so this counts only what the
+ * gateway actually reads. A gateway that answers before draining gets its
+ * response passed through with no 413 — nothing over the limit was forwarded
+ * either way, but the client sees a different answer than it would on Node,
+ * where server.ts counts the bytes as they arrive.
  */
-export function configFromEnv(
-	get: (key: string) => string | undefined,
-): RelayConfig {
-	const gatewayUrl = get("GATEWAY_URL");
-	if (gatewayUrl === undefined || gatewayUrl === "") {
-		throw new Error(
-			"GATEWAY_URL is required: set it to your OHTTP gateway URL (e.g. https://gateway.ohttp.info/ohttp)",
-		);
-	}
+function limitBody(
+	body: ReadableStream<Uint8Array>,
+	limit: number,
+): { body: ReadableStream<Uint8Array>; over: () => boolean } {
+	let seen = 0;
+	let over = false;
 	return {
-		gatewayUrl,
-		maxRequestSize: Number.parseInt(
-			get("MAX_REQUEST_SIZE") ?? String(defaults.maxRequestSize),
-			10,
+		body: body.pipeThrough(
+			new TransformStream<Uint8Array, Uint8Array>({
+				transform(chunk, controller) {
+					seen += chunk.byteLength;
+					if (seen > limit) {
+						over = true;
+						throw new Error("body exceeds the relay limit");
+					}
+					controller.enqueue(chunk);
+				},
+			}),
 		),
-		corsOrigin: get("CORS_ORIGIN") ?? defaults.corsOrigin,
+		over: () => over,
 	};
 }
 
-const validContentTypes: readonly string[] = [
-	MediaType.REQUEST,
-	MediaType.CHUNKED_REQUEST,
-];
-
-export function createApp(config: RelayConfig): Hono {
-	const app = new Hono();
+export function createApp(config: RelayConfig): RelayApp {
 	const fetcher = config.fetcher ?? fetch;
+	const cors = corsHeaders(config.corsOrigin);
 
-	app.use(
-		"*",
-		cors({
-			origin: config.corsOrigin,
-			allowMethods: ["GET", "POST", "OPTIONS"],
-			allowHeaders: [
-				"Content-Type",
-				"signature",
-				"signature-agent",
-				"signature-input",
-			],
-			maxAge: 86400,
-		}),
-	);
+	return {
+		async fetch(request: Request): Promise<Response> {
+			const { method } = request;
+			if (method === "OPTIONS") {
+				return new Response(null, { status: 204, headers: cors });
+			}
 
-	app.get("/health", (c) => c.text("OK"));
+			if (method === "GET" && new URL(request.url).pathname === "/health") {
+				return new Response("OK", {
+					headers: { ...cors, "Content-Type": "text/plain;charset=UTF-8" },
+				});
+			}
 
-	app.all("/*", async (c) => {
-		const { method } = c.req;
-		const contentType = c.req.header("Content-Type");
+			const contentType = request.headers.get("Content-Type") ?? undefined;
+			if (method === "POST") {
+				const bad = rejectPost(
+					contentType,
+					request.headers.get("Content-Length") ?? undefined,
+					config.maxRequestSize,
+				);
+				if (bad) {
+					return new Response(JSON.stringify({ error: bad.error }), {
+						status: bad.status,
+						headers: { ...cors, "Content-Type": "application/json" },
+					});
+				}
+			}
 
-		// Validate Content-Type on POST requests
-		if (method === "POST") {
-			if (
-				contentType === undefined ||
-				!validContentTypes.includes(contentType)
-			) {
-				return c.json(
-					{ error: `Expected ${validContentTypes.join(" or ")}` },
-					415,
+			const sends = method !== "GET" && method !== "HEAD";
+			const limited =
+				sends && request.body !== null
+					? limitBody(request.body, config.maxRequestSize)
+					: undefined;
+
+			let upstream: Response;
+			try {
+				upstream = await fetcher(config.gatewayUrl, {
+					method,
+					headers: forwardHeaders(
+						contentType,
+						request.headers.get("Incremental") ?? undefined,
+					),
+					...(sends && {
+						body: limited?.body ?? request.body,
+						duplex: "half",
+					}),
+				} as RequestInit);
+			} catch (error) {
+				if (limited?.over() !== true) throw error;
+				return new Response(
+					JSON.stringify({
+						error: `Request exceeds ${config.maxRequestSize} byte limit`,
+					}),
+					{
+						status: 413,
+						headers: { ...cors, "Content-Type": "application/json" },
+					},
 				);
 			}
 
-			const contentLength = c.req.header("Content-Length");
-			if (
-				contentLength !== undefined &&
-				Number.parseInt(contentLength, 10) > config.maxRequestSize
-			) {
-				return c.json(
-					{ error: `Request exceeds ${config.maxRequestSize} byte limit` },
-					413,
-				);
-			}
-		}
-
-		// Build forwarded headers.
-		// Strip all identifying headers — only forward Content-Type and Incremental.
-		// The gateway must only see the relay's identity, not the client's.
-		const headers = new Headers();
-		if (contentType !== undefined) headers.set("Content-Type", contentType);
-		const incremental = Incremental.get(c.req.raw.headers);
-		if (incremental !== undefined) Incremental.set(headers, incremental);
-
-		const hasBody = method !== "GET" && method !== "HEAD";
-		const upstream = await fetcher(config.gatewayUrl, {
-			method,
-			headers,
-			...(hasBody && { body: c.req.raw.body, duplex: "half" }),
-		} as RequestInit);
-		// Wrap in a new Response so CORS middleware can mutate headers
-		// (fetch Response headers are immutable in Node.js)
-		return new Response(upstream.body, upstream);
-	});
-
-	return app;
+			// Rebuilt rather than mutated: fetch Response headers are immutable
+			// in Node, and set() collapses any the gateway already sent.
+			const headers = new Headers(
+				stripHopByHop(Object.fromEntries(upstream.headers)),
+			);
+			for (const [name, value] of Object.entries(cors))
+				headers.set(name, value);
+			return new Response(upstream.body, {
+				status: upstream.status,
+				statusText: upstream.statusText,
+				headers,
+			});
+		},
+	};
 }
