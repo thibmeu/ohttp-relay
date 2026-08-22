@@ -1,6 +1,6 @@
 {
 	"imports": {
-		"ohttp-ts": "npm:ohttp-ts@0.5.0",
-		"ohttp-ts/": "npm:ohttp-ts@0.5.0/"
+		"ohttp-ts": "npm:ohttp-ts",
+		"ohttp-ts/": "npm:ohttp-ts/"
 	}
 }
