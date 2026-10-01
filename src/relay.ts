@@ -107,6 +107,7 @@ export function createApp(config: RelayConfig): RelayApp {
 					headers: forwardHeaders(
 						contentType,
 						request.headers.get("Incremental") ?? undefined,
+						method,
 					),
 					...(sends && {
 						body: limited?.body ?? request.body,

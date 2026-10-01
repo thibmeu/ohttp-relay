@@ -55,6 +55,44 @@ async function withRelay<T>(
 }
 
 describe("node server", () => {
+	it.each(["GET", "HEAD"])("requests gateway keys with %s", async (method) => {
+		const keysGateway = createServer((req, res) => {
+			expect(req.url).toBe("/.well-known/ohttp-gateway");
+			expect(req.method).toBe(method);
+			expect(req.headers.accept).toBe(MediaType.KEYS);
+			expect(Object.keys(req.headers).sort()).toEqual([
+				"accept",
+				"connection",
+				"host",
+			]);
+			res.writeHead(200, { "Content-Type": MediaType.KEYS });
+			res.end("keys");
+		});
+		const url = await listen(keysGateway);
+		try {
+			await withRelay(
+				{ gatewayUrl: `${url}/.well-known/ohttp-gateway` },
+				async (base) => {
+					const res = await fetch(`${base}/ohttp`, {
+						method,
+						headers: {
+							Accept: "application/client-unique",
+							"Content-Type": "application/client-unique",
+							Incremental: "?1",
+							Cookie: "session=secret",
+							Authorization: "Bearer token",
+						},
+					});
+					expect(res.status).toBe(200);
+					expect(res.headers.get("Content-Type")).toBe(MediaType.KEYS);
+					expect(await res.text()).toBe(method === "GET" ? "keys" : "");
+				},
+			);
+		} finally {
+			keysGateway.close();
+		}
+	});
+
 	it("serves a health check without forwarding", async () => {
 		await withRelay({}, async (base) => {
 			const res = await fetch(`${base}/health`);

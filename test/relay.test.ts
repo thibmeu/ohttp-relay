@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { configFromEnv, createApp } from "../src/relay.ts";
 
 const config = {
-	gatewayUrl: "https://gateway.example/ohttp",
+	gatewayUrl: "https://gateway.example/.well-known/ohttp-gateway",
 	maxRequestSize: 1_048_576,
 	corsOrigin: "*",
 };
@@ -35,6 +35,41 @@ describe("configFromEnv", () => {
 });
 
 describe("relay", () => {
+	it.each(["GET", "HEAD"])("requests gateway keys with %s", async (method) => {
+		let seen: Headers | undefined;
+		const app = createApp({
+			...config,
+			fetcher: async (input, init) => {
+				expect(String(input)).toBe(config.gatewayUrl);
+				expect(init?.method).toBe(method);
+				seen = new Headers(init?.headers);
+				return new Response(method === "GET" ? "keys" : null, {
+					headers: { "Content-Type": MediaType.KEYS },
+				});
+			},
+		});
+		const res = await app.fetch(
+			new Request("https://relay/ohttp", {
+				method,
+				headers: {
+					Accept: "application/client-unique",
+					"Content-Type": "application/client-unique",
+					Incremental: "?1",
+					Cookie: "session=secret",
+					Authorization: "Bearer token",
+				},
+			}),
+		);
+		expect(res.status).toBe(200);
+		expect(res.headers.get("Content-Type")).toBe(MediaType.KEYS);
+		expect(await res.text()).toBe(method === "GET" ? "keys" : "");
+		expect(seen?.get("Accept")).toBe(MediaType.KEYS);
+		expect(seen?.get("Content-Type")).toBeNull();
+		expect(seen?.get("Incremental")).toBeNull();
+		expect(seen?.get("Cookie")).toBeNull();
+		expect(seen?.get("Authorization")).toBeNull();
+	});
+
 	it("serves a health check without forwarding", async () => {
 		let forwarded = false;
 		const app = createApp({

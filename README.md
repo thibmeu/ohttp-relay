@@ -33,7 +33,7 @@ OHTTP requires the relay and [gateway](https://github.com/thibmeu/ohttp-gateway)
 
 | Variable | Default | Description |
 |---|---|---|
-| `GATEWAY_URL` | `https://gateway.ohttp.info/ohttp` | Full URL of the gateway's oblivious request resource |
+| `GATEWAY_URL` | `https://gateway.ohttp.info/.well-known/ohttp-gateway` | Full URL of the gateway's oblivious request resource |
 | `CORS_ORIGIN` | `*` | Allowed CORS origin |
 | `MAX_REQUEST_SIZE` | `1048576` | Maximum request body size (bytes) |
 | `PORT` | `3000` | Listening port (Node.js only) |
@@ -109,6 +109,11 @@ to the gateway as opaque bytes. To hide who the client is, it strips every clien
 header except the OHTTP `Content-Type` and the `Incremental` indicator: cookies,
 `Authorization`, `User-Agent`, `X-Forwarded-For` and everything else are dropped
 before forwarding. The relay also does not log request contents.
+
+GET and HEAD requests to the relay fetch keys from the configured gateway URL
+with `Accept: application/ohttp-keys`. The relay sets this value itself and drops
+the client's Accept header. Use a gateway URL that serves both keys and encrypted
+requests, such as `/.well-known/ohttp-gateway`.
 
 On Node.js that set is exact, and a test asserts it. On edge platforms the
 runtime's own `fetch` may append headers of its own — `undici` adds `accept`,

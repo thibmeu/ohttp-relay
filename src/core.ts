@@ -10,7 +10,7 @@
 import { Incremental, MediaType } from "ohttp-ts";
 
 export interface RelayConfig {
-	/** Gateway base URL (e.g. https://gateway.ohttp.info) */
+	/** Full gateway resource URL. */
 	gatewayUrl: string;
 	/** Maximum request body size in bytes */
 	maxRequestSize: number;
@@ -43,7 +43,7 @@ export function configFromEnv(
 	const gatewayUrl = get("GATEWAY_URL");
 	if (gatewayUrl === undefined || gatewayUrl === "") {
 		throw new Error(
-			"GATEWAY_URL is required: set it to your OHTTP gateway URL (e.g. https://gateway.ohttp.info/ohttp)",
+			"GATEWAY_URL is required: set it to your OHTTP gateway URL (e.g. https://gateway.ohttp.info/.well-known/ohttp-gateway)",
 		);
 	}
 	return {
@@ -108,7 +108,8 @@ export function rejectPost(
 }
 
 /**
- * The only headers that travel to the gateway: Content-Type and Incremental.
+ * GET and HEAD send only a fixed Accept header to request gateway keys.
+ * Other methods forward Content-Type and Incremental.
  *
  * Everything identifying the client is dropped — the gateway must see the
  * relay's identity, never the client's. Returning a plain object rather than
@@ -120,7 +121,9 @@ export function forwardHeaders(
 	// A repeated header arrives joined with ", " — node:http only hands back an
 	// array for set-cookie — which parses to undefined and is dropped.
 	incrementalRaw: string | undefined,
+	method: string | undefined,
 ): Record<string, string> {
+	if (method === "GET" || method === "HEAD") return { Accept: MediaType.KEYS };
 	const headers: Record<string, string> = {};
 	if (contentType !== undefined) headers["Content-Type"] = contentType;
 	if (incrementalRaw !== undefined) {

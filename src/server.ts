@@ -98,6 +98,7 @@ export function createRelayServer(config: RelayConfig) {
 				headers: forwardHeaders(
 					contentType,
 					req.headers.incremental as string | undefined,
+					req.method,
 				),
 				timeout: GATEWAY_TIMEOUT_MS,
 			},
