@@ -19,6 +19,6 @@ upload_source_maps = true
 enabled = true
 
 [vars]
-GATEWAY_URL = "https://gateway.ohttp.info/ohttp"
+GATEWAY_URL = "https://gateway.ohttp.info/.well-known/ohttp-gateway"
 MAX_REQUEST_SIZE = "1048576"
 CORS_ORIGIN = "*"

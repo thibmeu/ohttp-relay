@@ -10,5 +10,5 @@
   function = "netlify"
 
 [template.environment]
-  GATEWAY_URL = { required = true, description = "OHTTP gateway URL (e.g. https://gateway.ohttp.info/ohttp)" }
+  GATEWAY_URL = { required = true, description = "OHTTP gateway URL (e.g. https://gateway.ohttp.info/.well-known/ohttp-gateway)" }
   CORS_ORIGIN = { description = "Allowed CORS origin (default: *)" }
