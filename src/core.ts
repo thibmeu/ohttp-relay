@@ -81,7 +81,7 @@ export function corsHeaders(origin: string): Record<string, string> {
 		...(origin !== "*" && { vary: "Origin" }),
 		"access-control-allow-methods": "GET,POST,OPTIONS",
 		"access-control-allow-headers":
-			"Content-Type,signature,signature-agent,signature-input",
+			"Content-Type,Incremental,signature,signature-agent,signature-input",
 		"access-control-max-age": "86400",
 	};
 }

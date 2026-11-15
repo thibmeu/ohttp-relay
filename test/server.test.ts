@@ -133,6 +133,10 @@ describe("node server", () => {
 			const res = await fetch(base, { method: "OPTIONS" });
 			expect(res.status).toBe(204);
 			expect(res.headers.get("access-control-allow-methods")).toContain("POST");
+			// ohttp-ts 0.7 chunked clients send `Incremental: ?1`
+			expect(res.headers.get("access-control-allow-headers")).toContain(
+				"Incremental",
+			);
 		});
 	});
 
